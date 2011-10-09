@@ -1,30 +1,26 @@
 /**
- * Copyright (c) 2011 Anders '4ZM' Sundman <anders@4zm.org>
+ * Copyright (c) 2011 Anders Sundman <anders@4zm.org>
  * 
- * This file is part of NFCApp.
+ * This file is part of SLURP.
  * 
- * NFCApp is free software: you can redistribute it and/or modify
+ * SLURP is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
 
- * NFCApp is distributed in the hope that it will be useful,
+ * SLURP is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License
- * along with NFCApp.  If not, see <http://www.gnu.org/licenses/>.
+ * along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
  */
  	
 package org.sparvnastet.nfc;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -41,7 +37,6 @@ import android.nfc.Tag;
 import android.nfc.tech.MifareClassic;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Parcelable;
 import android.util.Log;
 import android.widget.EditText;
@@ -50,22 +45,26 @@ import android.widget.Toast;
 public class NFCActivity extends Activity {
 	static final int KEY_SIZE = 6;
 	static final String LOGTAG = "NFC";
+	static final String CURRENT_KEY_FILE = "keys";
 	
 	private NfcAdapter mAdapter;
 	private PendingIntent mPendingIntent;
 	private IntentFilter[] mFilters;
 	private String[][] mTechLists;
 
-	private byte[][][] mCurrentKeys;
 	private byte[][][] mTagData;
 	
 	private FindKeysTask mKeysTask;
 	private ReadTagTask mReadTagTask;
 	
+	private File mKeyFile;
+	private MifareKeyChain mKeyChain;
+
+	
 	EditText mTextBox = null;
 
 	private void readTag(MifareClassic tag) {
-		mReadTagTask = new ReadTagTask(mCurrentKeys);
+		mReadTagTask = new ReadTagTask();
 		Log.i(LOGTAG, "Starting keys thread");
 
 		mReadTagTask.execute(tag);
@@ -78,65 +77,12 @@ public class NFCActivity extends Activity {
 		mKeysTask.execute(tag);
 	}
 
-	private boolean loadKeys() throws IOException {
-		String state = Environment.getExternalStorageState();
-
-		if (!Environment.MEDIA_MOUNTED.equals(state)
-				&& !Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
-			throw new IOException(); // We need at least read access
-
-		File file = new File(getExternalFilesDir(null), "current.keys");
-
-		if (!file.exists())
-			return false;
-
-		InputStream is = new FileInputStream(file);
-		int totalBytes = is.available();
-
-		if ((totalBytes % (2 * KEY_SIZE)) != 0)
-			throw new IOException(); // Invalid format of keyfile
-
-		int totalSectors = totalBytes / (2 * KEY_SIZE);
-		mCurrentKeys = new byte[totalSectors][2][];
-		for (int sector = 0; sector < totalSectors; ++sector) {
-			mCurrentKeys[sector][0] = new byte[KEY_SIZE];
-			is.read(mCurrentKeys[sector][0]); // A Key
-			mCurrentKeys[sector][0] = new byte[KEY_SIZE];
-			is.read(mCurrentKeys[sector][0]); // B Key
-		}
-
-		is.close();
-
-		return true;
-	}
-
-	private void storeKeys() throws IOException {
-		if (mCurrentKeys == null)
-			return;
-
-		String state = Environment.getExternalStorageState();
-
-		if (!Environment.MEDIA_MOUNTED.equals(state)
-				|| Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
-			throw new IOException(); // We need write access
-
-		File file = new File(getExternalFilesDir(null), "current.keys");
-
-		OutputStream os = new FileOutputStream(file);
-		for (int sector = 0; sector < mCurrentKeys.length; ++sector) {
-			os.write(mCurrentKeys[sector][0]); // A Key
-			os.write(mCurrentKeys[sector][1]); // B Key
-		}
-
-		os.close();
-	}
-
 	private byte[][] getDefaultKeys() {
 		ArrayList<byte[]> keys = new ArrayList<byte[]>();
 		keys.add(MifareClassic.KEY_DEFAULT);
 		keys.add(MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY);
 		keys.add(MifareClassic.KEY_NFC_FORUM);
-
+		
 		try {
 			final String KEY_TAG = "key";
 			Resources res = getResources();
@@ -165,7 +111,8 @@ public class NFCActivity extends Activity {
 		byte[][] keysArray = new byte[keys.size()][];
 		return keys.toArray(keysArray);				
 	}
-
+	
+	
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -177,15 +124,16 @@ public class NFCActivity extends Activity {
 
 		mAdapter = NfcAdapter.getDefaultAdapter(this);
 
+		// Try to load keys from the "current" key file. 
+		mKeyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
 		try {
-			loadKeys();
+			if (mKeyFile.exists())
+				mKeyChain = MifareKeyChain.LoadKeys(mKeyFile);
 		} catch (IOException e) {
-			Log.e(LOGTAG, "Error loading keys");
-			mCurrentKeys = null;
+			Log.e(LOGTAG, "Error loading keys: " + e);
 		}
 
-		// Setup foreground processing of events
-
+		// Setup foreground processing of NFC intents
 		mPendingIntent = PendingIntent.getActivity(this, 0, new Intent(this,
 				getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
 		IntentFilter techFilter = new IntentFilter(
@@ -234,7 +182,7 @@ public class NFCActivity extends Activity {
 			Log.i(LOGTAG, "Size: ? (code " + size + ")");
 
 		Log.i(LOGTAG, "Tag type: " + mifareTag.getType());
-		if (mCurrentKeys == null) {
+		if (mKeyChain == null) {
 			Log.i(LOGTAG, "Keys is null, will start search");
 			findKeys(mifareTag);
 		}
@@ -254,10 +202,6 @@ public class NFCActivity extends Activity {
 		return blockOffset + relBlock;
 	}
 
-	private enum SECTOR_KEY {
-		KEY_A, KEY_B
-	};
-
 	public void onNewIntent(Intent intent) {
 		setIntent(intent);
 		resolveIntent(intent);
@@ -272,10 +216,66 @@ public class NFCActivity extends Activity {
 		super.onResume();
 		mAdapter.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
 	}
-	
-	private class FindKeysTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
-		private MifareClassic mTag;
-		byte[][] mDefaultKeys = getDefaultKeys();
+
+	private enum SECTOR_KEY {
+		KEY_A, KEY_B
+	};
+
+	private class FindKeysTask extends AsyncTask<MifareClassic, Integer, MifareKeyChain> {
+		MifareClassic mTag;
+		byte[][] mDefaultKeys = getDefaultKeys(); // Make static
+		
+		@Override
+		protected MifareKeyChain doInBackground(MifareClassic... tagParam) {
+			if (tagParam == null || tagParam.length != 1)
+				return null;
+			
+			mTag = tagParam[0];
+
+			Log.i(LOGTAG, "TestKeysTask: doInBackground");
+			try {
+				mTag.connect();
+
+				int sectorCount = mTag.getSectorCount();
+				MifareKeyChain keyChain = new MifareKeyChain(sectorCount);
+
+				for (int i = 0; i < sectorCount; ++i) {
+					keyChain.setKeyA(i, probeKey(mTag, i, SECTOR_KEY.KEY_A));
+					keyChain.setKeyB(i, probeKey(mTag, i, SECTOR_KEY.KEY_B));
+
+					publishProgress((100 * (i+1)) / sectorCount);
+				}
+
+				mTag.close();
+
+				return keyChain;
+			} catch (IOException e) {
+				Log.e(LOGTAG, "TestKeysTask: Auth IOException");
+				mTag = null;
+				return null;
+			}
+		}
+
+		@Override
+		protected void onProgressUpdate(Integer... progress) {
+			// setProgress(progress[0]);
+			Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
+		}
+
+		@Override
+		protected void onPostExecute(MifareKeyChain keyChain) {
+			Log.i(LOGTAG, "TestKeysTask: onPostExecute");
+
+			mKeyChain = keyChain;
+
+			if (keyChain == null) {
+				Toast.makeText(NFCActivity.this, "Keys Not Found", Toast.LENGTH_SHORT).show();
+			}
+			else {
+				Toast.makeText(NFCActivity.this, "Keys Found", Toast.LENGTH_SHORT).show();
+				readTag(mTag);
+			}
+		}
 		
 		private byte[] probeKey(MifareClassic tag, int sector, SECTOR_KEY keyType) throws IOException {
 			for (byte[] key : mDefaultKeys) {
@@ -290,62 +290,9 @@ public class NFCActivity extends Activity {
 
 			return null;
 		}
-
-		@Override
-		protected byte[][][] doInBackground(MifareClassic... tagParam) {
-			mTag = tagParam[0];
-
-			Log.i(LOGTAG, "TestKeysTask: doInBackground");
-			try {
-				mTag.connect();
-
-				// Array layout: [Sector][A=0|B=1][6 Byte Key]
-				byte[][][] keys = new byte[mTag.getSectorCount()][2][];
-				int sectorCount = mTag.getSectorCount();
-				for (int i = 0; i < sectorCount; ++i) {
-					keys[i][0] = probeKey(mTag, i, SECTOR_KEY.KEY_A);
-					keys[i][1] = probeKey(mTag, i, SECTOR_KEY.KEY_B);
-					publishProgress((100 * (i+1)) / sectorCount);
-				}
-
-				mTag.close();
-
-				return keys;
-			} catch (IOException e) {
-				Log.e(LOGTAG, "TestKeysTask: Auth IOException");
-				return null;
-			}
-		}
-
-		@Override
-		protected void onProgressUpdate(Integer... progress) {
-			// setProgress(progress[0]);
-			Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
-		}
-
-		@Override
-		protected void onPostExecute(byte[][][] keys) {
-			Log.i(LOGTAG, "TestKeysTask: onPostExecute");
-
-			if (keys == null)
-				Toast.makeText(NFCActivity.this, "Keys Not Found",
-						Toast.LENGTH_SHORT).show();
-			else
-				Toast.makeText(NFCActivity.this, "Keys Found",
-						Toast.LENGTH_SHORT).show();
-
-			mCurrentKeys = keys;
-			readTag(mTag);
-		}
 	}
 
 	private class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
-
-		private byte[][][] mKeys;
-
-		public ReadTagTask(byte[][][] keys) {
-			mKeys = keys;
-		}
 
 		private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
 			byte[][] data = new byte[tag.getBlockCountInSector(sector)][];
@@ -372,18 +319,21 @@ public class NFCActivity extends Activity {
 
 		@Override
 		protected byte[][][] doInBackground(MifareClassic... tagParam) {
+			if (tagParam == null || tagParam.length != 1)
+				return null;
+
 			MifareClassic tag = tagParam[0];
 			Log.i(LOGTAG, "ReadTagTask: doInBackground");
 			try {
 				tag.connect();
 
 				int sectorCount = tag.getSectorCount();
-				byte[][][] keys = mKeys;
 				byte[][][] data = new byte[sectorCount][][];
 
 				for (int i = 0; i < sectorCount; ++i) {
-
-					data[i] = readSector(tag, i, keys[i][0], keys[i][0]);
+					data[i] = readSector(tag, i, mKeyChain.getKeyA(i), mKeyChain.getKeyB(i));
+					
+					// Print data
 					for (int blockIndex = 0; blockIndex < tag.getBlockCountInSector(i); ++blockIndex) 
 						Log.i(LOGTAG, "Sector: " + i + ", block: " + blockIndex + " Data: " + bytesToString(data[i][blockIndex]));
 
@@ -410,11 +360,9 @@ public class NFCActivity extends Activity {
 			Log.i(LOGTAG, "ReadTagTask: onPostExecute");
 
 			if (data == null)
-				Toast.makeText(NFCActivity.this, "Couldn't read data",
-						Toast.LENGTH_SHORT).show();
+				Toast.makeText(NFCActivity.this, "Couldn't read data", Toast.LENGTH_SHORT).show();
 			else
-				Toast.makeText(NFCActivity.this, "Data Read",
-						Toast.LENGTH_SHORT).show();
+				Toast.makeText(NFCActivity.this, "Data Read", Toast.LENGTH_SHORT).show();
 
 			mTagData = data;
 		}
