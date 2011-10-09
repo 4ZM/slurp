@@ -28,6 +28,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
@@ -39,6 +40,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -117,11 +119,12 @@ public class NFCActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		Log.i(LOGTAG, "onCreate");
 		setContentView(R.layout.main);
 		mTextBox = (EditText) findViewById(R.id.editTextBox);
 		mTextBox.append("onCreate\n");
-
+		
 		mAdapter = NfcAdapter.getDefaultAdapter(this);
 
 		// Try to load keys from the "current" key file. 
@@ -225,6 +228,19 @@ public class NFCActivity extends Activity {
 		MifareClassic mTag;
 		byte[][] mDefaultKeys = getDefaultKeys(); // Make static
 		
+		ProgressDialog mProgressDialog;
+		
+		@Override
+        protected void onPreExecute() {
+            setProgressBarIndeterminateVisibility(true);
+            
+    		mProgressDialog = new ProgressDialog(NFCActivity.this);
+    		mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+    		mProgressDialog.setMessage("Trying keys...");
+    		mProgressDialog.setCancelable(false);
+    		mProgressDialog.show();
+		} 
+		
 		@Override
 		protected MifareKeyChain doInBackground(MifareClassic... tagParam) {
 			if (tagParam == null || tagParam.length != 1)
@@ -258,7 +274,7 @@ public class NFCActivity extends Activity {
 
 		@Override
 		protected void onProgressUpdate(Integer... progress) {
-			// setProgress(progress[0]);
+    		mProgressDialog.setProgress(progress[0]);
 			Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
 		}
 
@@ -267,6 +283,8 @@ public class NFCActivity extends Activity {
 			Log.i(LOGTAG, "TestKeysTask: onPostExecute");
 
 			mKeyChain = keyChain;
+			setProgressBarIndeterminateVisibility(false); 
+			mProgressDialog.dismiss();
 
 			if (keyChain == null) {
 				Toast.makeText(NFCActivity.this, "Keys Not Found", Toast.LENGTH_SHORT).show();
@@ -294,28 +312,18 @@ public class NFCActivity extends Activity {
 
 	private class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
 
-		private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
-			byte[][] data = new byte[tag.getBlockCountInSector(sector)][];
-
-			Log.i(LOGTAG, "ReadTagTask");
-			boolean res = keyA != null && tag.authenticateSectorWithKeyA(sector, keyA);
-			
-			if (res) 
-				Log.i(LOGTAG, "Use Key A");
-			
-			if (!res && keyB != null) {
-				Log.i(LOGTAG, "Use Key A");
-				res = tag.authenticateSectorWithKeyB(sector, keyB);
-			}
-
-			if (!res)
-				throw new IOException("READ ERROR - can't auth");
-
-			for (int i = 0; i < tag.getBlockCountInSector(sector); ++i)
-				data[i] = tag.readBlock(getBlockIndex(tag, sector, i));
-
-			return data;
-		}
+		private ProgressDialog mProgressDialog; 
+		
+		@Override
+        protected void onPreExecute() {
+            setProgressBarIndeterminateVisibility(true);
+            
+    		mProgressDialog = new ProgressDialog(NFCActivity.this);
+    		mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+    		mProgressDialog.setMessage("Reading tag...");
+    		mProgressDialog.setCancelable(false);
+    		mProgressDialog.show();
+		} 
 
 		@Override
 		protected byte[][][] doInBackground(MifareClassic... tagParam) {
@@ -351,13 +359,16 @@ public class NFCActivity extends Activity {
 
 		@Override
 		protected void onProgressUpdate(Integer... progress) {
-			// setProgress(progress[0]);
+			mProgressDialog.setProgress(progress[0]);
 			Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
 		}
 
 		@Override
 		protected void onPostExecute(byte[][][] data) {
 			Log.i(LOGTAG, "ReadTagTask: onPostExecute");
+
+			setProgressBarIndeterminateVisibility(false); 
+			mProgressDialog.dismiss();
 
 			if (data == null)
 				Toast.makeText(NFCActivity.this, "Couldn't read data", Toast.LENGTH_SHORT).show();
@@ -366,6 +377,30 @@ public class NFCActivity extends Activity {
 
 			mTagData = data;
 		}
+		
+		private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
+			byte[][] data = new byte[tag.getBlockCountInSector(sector)][];
+
+			Log.i(LOGTAG, "ReadTagTask");
+			boolean res = keyA != null && tag.authenticateSectorWithKeyA(sector, keyA);
+			
+			if (res) 
+				Log.i(LOGTAG, "Use Key A");
+			
+			if (!res && keyB != null) {
+				Log.i(LOGTAG, "Use Key A");
+				res = tag.authenticateSectorWithKeyB(sector, keyB);
+			}
+
+			if (!res)
+				throw new IOException("READ ERROR - can't auth");
+
+			for (int i = 0; i < tag.getBlockCountInSector(sector); ++i)
+				data[i] = tag.readBlock(getBlockIndex(tag, sector, i));
+
+			return data;
+		}
+
 	}
 
 	private static byte[] fromHexString(final String encoded) {
