@@ -24,7 +24,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -255,7 +257,17 @@ public class SLURPActivity extends Activity {
         if (!Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
             return false;
 
-        String fileName = bytesToString(mTagData[0][0]).replace(" ", "");
+        StringBuilder sb = new StringBuilder();
+        sb.append(bytesToString(mTagData[0][0]).replace(" ", ""));
+        sb.append(".");
+
+        final String DATE_FORMAT = "yyyyMMdd.HHmmss";
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        sb.append(sdf.format(cal.getTime()));
+        sb.append(".card");
+
+        String fileName = sb.toString();
         Log.i(LOGTAG, "Trying to safe data to: " + fileName);
 
         File dataFile = new File(getExternalFilesDir(null), fileName);
