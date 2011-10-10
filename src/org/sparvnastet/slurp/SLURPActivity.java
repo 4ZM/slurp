@@ -87,9 +87,9 @@ public class SLURPActivity extends Activity {
         mTextBoxKeys.setText("");
         if (mKeyChain != null) {
             for (int sector = 0; sector < keys.getSectorCount(); ++sector) {
-                mTextBoxKeys.append("Sector " + sector + " (Keys A & B):\n");
-                mTextBoxKeys.append(bytesToString(keys.getKeyA(sector)) + "  ++  "
-                        + bytesToString(keys.getKeyB(sector)) + "\n");
+                mTextBoxKeys.append("Sector " + (sector < 10 ? ("0" + sector) : sector) + ": " + 
+                    bytesToString(keys.getKeyA(sector)) + " | " +
+                    bytesToString(keys.getKeyB(sector)) + "\n");
             }
         }
     }
