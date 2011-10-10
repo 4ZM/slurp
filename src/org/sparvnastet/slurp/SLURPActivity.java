@@ -343,17 +343,20 @@ public class SLURPActivity extends Activity {
         return blockOffset + relBlock;
     }
 
+    @Override
     public void onNewIntent(Intent intent) {
         setIntent(intent);
         resolveIntent(intent);
     }
 
+    @Override
     public void onPause() {
         super.onPause();
         if (mAdapter != null)
             mAdapter.disableForegroundDispatch(this);
     }
 
+    @Override
     public void onResume() {
         super.onResume();
         if (mAdapter != null)
