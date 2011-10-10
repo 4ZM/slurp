@@ -248,8 +248,9 @@ public class SLURPActivity extends Activity {
     };
 
     private class FindKeysTask extends AsyncTask<MifareClassic, Integer, MifareKeyChain> {
-        MifareClassic mTag;
-        byte[][] mDefaultKeys = getDefaultKeys(); // Make static
+        private MifareClassic mTag;
+        private int mSectorCount;
+        private byte[][] mDefaultKeys = getDefaultKeys(); // Make static
 
         ProgressDialog mProgressDialog;
 
@@ -258,8 +259,8 @@ public class SLURPActivity extends Activity {
             setProgressBarIndeterminateVisibility(true);
 
             mProgressDialog = new ProgressDialog(SLURPActivity.this);
-            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            mProgressDialog.setMessage("Trying keys...");
+            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            mProgressDialog.setTitle("Trying keys...");
             mProgressDialog.setCancelable(false);
             mProgressDialog.show();
         }
@@ -275,11 +276,13 @@ public class SLURPActivity extends Activity {
             try {
                 mTag.connect();
 
-                int sectorCount = mTag.getSectorCount();
-                MifareKeyChain keyChain = new MifareKeyChain(sectorCount);
+                mSectorCount = mTag.getSectorCount();
+                MifareKeyChain keyChain = new MifareKeyChain(mSectorCount);
 
                 byte[] keyA, keyB;
-                for (int i = 0; i < sectorCount; ++i) {
+                for (int i = 0; i < mSectorCount; ++i) {
+                    publishProgress(i);
+
                     keyA = probeKey(mTag, i, SECTOR_KEY.KEY_A);
                     keyB = probeKey(mTag, i, SECTOR_KEY.KEY_B);
                     if (keyA == null || keyB == null) // Require both keys
@@ -287,8 +290,6 @@ public class SLURPActivity extends Activity {
 
                     keyChain.setKeyA(i, keyA);
                     keyChain.setKeyB(i, keyB);
-
-                    publishProgress((100 * (i + 1)) / sectorCount);
                 }
 
                 mTag.close();
@@ -303,7 +304,7 @@ public class SLURPActivity extends Activity {
 
         @Override
         protected void onProgressUpdate(Integer... progress) {
-            mProgressDialog.setProgress(progress[0]);
+            mProgressDialog.setMessage("Sector:  " + progress[0] + " / " + (mSectorCount - 1));
             Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
         }
 
