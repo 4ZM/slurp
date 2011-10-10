@@ -20,7 +20,10 @@
 package org.sparvnastet.slurp;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -38,6 +41,7 @@ import android.nfc.Tag;
 import android.nfc.tech.MifareClassic;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.Menu;
@@ -87,9 +91,8 @@ public class SLURPActivity extends Activity {
         mTextBoxKeys.setText("");
         if (mKeyChain != null) {
             for (int sector = 0; sector < keys.getSectorCount(); ++sector) {
-                mTextBoxKeys.append("Sector " + (sector < 10 ? ("0" + sector) : sector) + ": " + 
-                    bytesToString(keys.getKeyA(sector)) + " | " +
-                    bytesToString(keys.getKeyB(sector)) + "\n");
+                mTextBoxKeys.append("Sector " + (sector < 10 ? ("0" + sector) : sector) + ": "
+                        + bytesToString(keys.getKeyA(sector)) + " | " + bytesToString(keys.getKeyB(sector)) + "\n");
             }
         }
     }
@@ -232,11 +235,56 @@ public class SLURPActivity extends Activity {
                 Toast.makeText(this, "Keys Loaded", Toast.LENGTH_SHORT).show();
             else
                 Toast.makeText(this, "Load Failed", Toast.LENGTH_LONG).show();
-
             break;
         case R.id.dump_data:
-            Toast.makeText(this, "Not Impl.", Toast.LENGTH_LONG).show();
+            if (saveData())
+                Toast.makeText(this, "Data Saved", Toast.LENGTH_LONG).show();
+            else
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+            break;
         }
+        return true;
+    }
+
+    private boolean saveData() {
+        if (mTagData == null)
+            return false;
+
+        String state = Environment.getExternalStorageState();
+
+        if (!Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
+            return false;
+
+        String fileName = bytesToString(mTagData[0][0]).replace(" ", "");
+        Log.i(LOGTAG, "Trying to safe data to: " + fileName);
+
+        File dataFile = new File(getExternalFilesDir(null), fileName);
+
+        try {
+
+            OutputStream os = new FileOutputStream(dataFile);
+
+            byte[][][] data = mTagData; // Local variable optimization
+            int totalBytes = 0;
+            for (int sector = 0; sector < data.length; ++sector) {
+                for (int block = 0; block < data[sector].length; ++block) {
+                    os.write(data[sector][block]);
+                    totalBytes += data[sector][block].length;
+                }
+            }
+
+            // Pad up to 4k size (for nfc-mfclassic compatibility)
+            assert (4096 - totalBytes >= 0);
+            os.write(new byte[4096 - totalBytes]);
+
+            os.close();
+
+        } catch (FileNotFoundException e) {
+            return false;
+        } catch (IOException e) {
+            return false;
+        }
+
         return true;
     }
 
@@ -470,6 +518,8 @@ public class SLURPActivity extends Activity {
             setTagData(data);
         }
 
+        // TODO This function should look at the access ctrl bits to determine
+        // what keys to use.
         private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
             byte[][] data = new byte[tag.getBlockCountInSector(sector)][];
 
@@ -487,8 +537,17 @@ public class SLURPActivity extends Activity {
             if (!res)
                 throw new IOException("READ ERROR - can't auth");
 
-            for (int i = 0; i < tag.getBlockCountInSector(sector); ++i)
+            int blocks = tag.getBlockCountInSector(sector);
+            for (int i = 0; i < blocks; ++i)
                 data[i] = tag.readBlock(getBlockIndex(tag, sector, i));
+
+            // We might not have read access to the access ctrl block.
+            // just fill in the data from our known keys.
+            for (int i = 0; i < KEY_SIZE; ++i)
+                data[blocks - 1][i] = keyA[i];
+
+            for (int i = 0; i < KEY_SIZE; ++i)
+                data[blocks - 1][i + 10] = keyB[i];
 
             return data;
         }
