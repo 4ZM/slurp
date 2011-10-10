@@ -278,9 +278,15 @@ public class NFCActivity extends Activity {
                 int sectorCount = mTag.getSectorCount();
                 MifareKeyChain keyChain = new MifareKeyChain(sectorCount);
 
+                byte[] keyA, keyB;
                 for (int i = 0; i < sectorCount; ++i) {
-                    keyChain.setKeyA(i, probeKey(mTag, i, SECTOR_KEY.KEY_A));
-                    keyChain.setKeyB(i, probeKey(mTag, i, SECTOR_KEY.KEY_B));
+                    keyA = probeKey(mTag, i, SECTOR_KEY.KEY_A);
+                    keyB = probeKey(mTag, i, SECTOR_KEY.KEY_B);
+                    if (keyA == null || keyB == null) // Require both keys
+                        return null;
+
+                    keyChain.setKeyA(i, keyA);
+                    keyChain.setKeyB(i, keyB);
 
                     publishProgress((100 * (i + 1)) / sectorCount);
                 }
