@@ -62,9 +62,35 @@ public class NFCActivity extends Activity {
 	private File mKeyFile;
 	private MifareKeyChain mKeyChain;
 
+	private EditText mTextBoxKeys;
+	private EditText mTextBoxData;
 	
-	EditText mTextBox = null;
+	private void setTagData(byte[][][] data) {
+		mTagData = data;
+		mTextBoxData.setText("");
+	
+		if (data != null) {
+			for (int sector = 0; sector < data.length; ++sector) {
+				mTextBoxData.append("Sector " + sector + ":\n");
+				for (int blockIndex = 0; blockIndex < data[sector].length; ++blockIndex) { 
+					mTextBoxData.append(bytesToString(data[sector][blockIndex]) + "\n");
+				}
+			}
+		}
+	}
 
+	private void setKeys(MifareKeyChain keys) {
+		mKeyChain = keys;
+		
+		mTextBoxKeys.setText("");
+		if (mKeyChain != null) {
+			for (int sector = 0; sector < keys.getSectorCount(); ++sector) {
+				mTextBoxKeys.append("Sector " + sector + " (Keys A & B):\n");
+				mTextBoxKeys.append(bytesToString(keys.getKeyA(sector)) + "  ++  " + bytesToString(keys.getKeyB(sector)) + "\n");
+			}
+		}
+	}
+	
 	private void readTag(MifareClassic tag) {
 		mReadTagTask = new ReadTagTask();
 		Log.i(LOGTAG, "Starting keys thread");
@@ -122,8 +148,9 @@ public class NFCActivity extends Activity {
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		Log.i(LOGTAG, "onCreate");
 		setContentView(R.layout.main);
-		mTextBox = (EditText) findViewById(R.id.editTextBox);
-		mTextBox.append("onCreate\n");
+		
+		mTextBoxKeys = (EditText) findViewById(R.id.EditTextKeys);
+		mTextBoxData = (EditText) findViewById(R.id.editTextData);
 		
 		mAdapter = NfcAdapter.getDefaultAdapter(this);
 
@@ -150,12 +177,9 @@ public class NFCActivity extends Activity {
 	void resolveIntent(Intent intent) {
 		Log.i(LOGTAG, "resolveIntent action=" + intent.getAction());
 
-		mTextBox.append("resolveIntent" + (int) (Math.random() * 100) + "\n");
-		
 		String action = intent.getAction();
 
 		if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
-			mTextBox.append("Intent TECH_DISCOVERED\n");
 
 			Parcelable tags = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
 			if (tags == null) {
@@ -185,8 +209,10 @@ public class NFCActivity extends Activity {
 			Log.i(LOGTAG, "Size: ? (code " + size + ")");
 
 		Log.i(LOGTAG, "Tag type: " + mifareTag.getType());
-		if (mKeyChain == null) {
+		
+		if (mKeyChain == null || mKeyChain.getSectorCount() != mifareTag.getSectorCount()) {
 			Log.i(LOGTAG, "Keys is null, will start search");
+			mKeyChain = null;
 			findKeys(mifareTag);
 		}
 		else { 
@@ -195,7 +221,6 @@ public class NFCActivity extends Activity {
 		}
 		
 		Log.i(LOGTAG, "Leaving resolveIntent");
-
 	}
 
 	static private int getBlockIndex(MifareClassic tag, int sector, int relBlock) {
@@ -233,7 +258,7 @@ public class NFCActivity extends Activity {
 		@Override
         protected void onPreExecute() {
             setProgressBarIndeterminateVisibility(true);
-            
+
     		mProgressDialog = new ProgressDialog(NFCActivity.this);
     		mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
     		mProgressDialog.setMessage("Trying keys...");
@@ -282,7 +307,6 @@ public class NFCActivity extends Activity {
 		protected void onPostExecute(MifareKeyChain keyChain) {
 			Log.i(LOGTAG, "TestKeysTask: onPostExecute");
 
-			mKeyChain = keyChain;
 			setProgressBarIndeterminateVisibility(false); 
 			mProgressDialog.dismiss();
 
@@ -293,6 +317,8 @@ public class NFCActivity extends Activity {
 				Toast.makeText(NFCActivity.this, "Keys Found", Toast.LENGTH_SHORT).show();
 				readTag(mTag);
 			}
+			
+			setKeys(keyChain);
 		}
 		
 		private byte[] probeKey(MifareClassic tag, int sector, SECTOR_KEY keyType) throws IOException {
@@ -340,11 +366,6 @@ public class NFCActivity extends Activity {
 
 				for (int i = 0; i < sectorCount; ++i) {
 					data[i] = readSector(tag, i, mKeyChain.getKeyA(i), mKeyChain.getKeyB(i));
-					
-					// Print data
-					for (int blockIndex = 0; blockIndex < tag.getBlockCountInSector(i); ++blockIndex) 
-						Log.i(LOGTAG, "Sector: " + i + ", block: " + blockIndex + " Data: " + bytesToString(data[i][blockIndex]));
-
 					publishProgress((100 * (i+1)) / sectorCount);
 				}
 
@@ -375,7 +396,7 @@ public class NFCActivity extends Activity {
 			else
 				Toast.makeText(NFCActivity.this, "Data Read", Toast.LENGTH_SHORT).show();
 
-			mTagData = data;
+			setTagData(data);
 		}
 		
 		private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
