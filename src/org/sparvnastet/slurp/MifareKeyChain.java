@@ -27,8 +27,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.Parcelable;
 
-public class MifareKeyChain {
+public class MifareKeyChain implements Parcelable {
 
     public final static int KEY_SIZE = 6;
 
@@ -131,4 +133,35 @@ public class MifareKeyChain {
         os.close();
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(mKeys.length);
+        for (byte[][] keyPair : mKeys) {
+            dest.writeByteArray(keyPair[A_KEY]);
+            dest.writeByteArray(keyPair[B_KEY]);
+        }
+    }
+
+    public static final Parcelable.Creator<MifareKeyChain> CREATOR = new Parcelable.Creator<MifareKeyChain>() {
+        public MifareKeyChain createFromParcel(Parcel in) {
+            int sectors = in.readInt();
+
+            MifareKeyChain keys = new MifareKeyChain(sectors);
+            for (int i = 0; i < sectors; ++i) {
+                keys.mKeys[i][A_KEY] = in.createByteArray();
+                keys.mKeys[i][B_KEY] = in.createByteArray();
+            }
+
+            return keys;
+        }
+
+        public MifareKeyChain[] newArray(int size) {
+            return new MifareKeyChain[size];
+        }
+    };
 }

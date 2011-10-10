@@ -58,6 +58,8 @@ public class SLURPActivity extends Activity {
     static final String LOGTAG = "NFC";
     static final String CURRENT_KEY_FILE = "current.keys";
 
+    static final String BUNDLE_KEY_CHAIN = "KEY_CHAIN";
+
     private NfcAdapter mAdapter;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
@@ -161,7 +163,14 @@ public class SLURPActivity extends Activity {
 
         mAdapter = NfcAdapter.getDefaultAdapter(this);
 
-        loadKeys();
+        if (savedInstanceState == null)
+            loadKeys();
+        else {
+            MifareKeyChain keyChain = savedInstanceState.getParcelable(BUNDLE_KEY_CHAIN);
+            setKeys(keyChain);
+        }
+
+        setTagData(null);
 
         // Setup foreground processing of NFC intents
         mPendingIntent = PendingIntent.getActivity(this, 0,
@@ -359,6 +368,12 @@ public class SLURPActivity extends Activity {
     public void onNewIntent(Intent intent) {
         setIntent(intent);
         resolveIntent(intent);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(BUNDLE_KEY_CHAIN, mKeyChain);
     }
 
     @Override
