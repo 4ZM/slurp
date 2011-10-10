@@ -1,0 +1,8 @@
+# Eclipse files
+
+.project
+.classpath
+default.properties
+proguard.cfg
+bin
+gen
