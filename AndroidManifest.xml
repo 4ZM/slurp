@@ -26,6 +26,7 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
 
     <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application android:icon="@drawable/icon" android:label="@string/app_name" android:debuggable="true">
         <activity android:name="org.sparvnastet.slurp.SLURPActivity" android:label="@string/app_name">

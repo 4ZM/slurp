@@ -100,9 +100,9 @@ public class MifareKeyChain {
         int totalSectors = totalBytes / (2 * KEY_SIZE);
         byte[][][] keys = new byte[totalSectors][2][];
         for (int sector = 0; sector < totalSectors; ++sector) {
-            keys[sector][0] = new byte[KEY_SIZE];
+            keys[sector][A_KEY] = new byte[KEY_SIZE];
             is.read(keys[sector][A_KEY]);
-            keys[sector][0] = new byte[KEY_SIZE];
+            keys[sector][B_KEY] = new byte[KEY_SIZE];
             is.read(keys[sector][B_KEY]);
         }
 
