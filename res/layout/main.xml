@@ -24,9 +24,21 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     android:layout_height="fill_parent"
     android:weightSum="1">
     <TextView android:text="Keys" android:id="@+id/textViewKey" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-    <EditText android:id="@+id/EditTextKeys" android:layout_width="match_parent" android:inputType="textMultiLine"  
-    android:layout_height="221dp" android:editable="false" android:cursorVisible="false" android:typeface="monospace" android:textSize="10dp"/>
+    <EditText android:id="@+id/EditTextKeys" 
+        android:layout_width="match_parent" 
+        android:inputType="none"
+        android:layout_height="221dp" 
+        android:editable="false" 
+        android:cursorVisible="false" 
+        android:typeface="monospace" 
+        android:textSize="10dp"/>
     <TextView android:text="Data" android:id="@+id/textViewData" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
-    <EditText android:id="@+id/editTextData" android:layout_width="match_parent" android:inputType="textMultiLine" 
-    android:layout_height="221dp" android:editable="false" android:cursorVisible="false" android:typeface="monospace" android:textSize="10dp"/>
+    <EditText android:id="@+id/editTextData" 
+        android:layout_width="match_parent" 
+        android:inputType="none" 
+        android:layout_height="221dp" 
+        android:editable="false" 
+        android:cursorVisible="false" 
+        android:typeface="monospace" 
+        android:textSize="10dp"/>
 </LinearLayout>
