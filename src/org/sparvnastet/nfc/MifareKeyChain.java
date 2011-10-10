@@ -30,101 +30,105 @@ import android.os.Environment;
 
 public class MifareKeyChain {
 
-	public final static int KEY_SIZE = 6;
-	
-	private final static int A_KEY = 0;
-	private final static int B_KEY = 1;
-	
-	private byte[][][] mKeys;
+    public final static int KEY_SIZE = 6;
 
-	public MifareKeyChain(int sectors) {
-		assert(sectors > 0);
-		mKeys = new byte[sectors][2][];
-	}
+    private final static int A_KEY = 0;
+    private final static int B_KEY = 1;
 
-	private MifareKeyChain(byte[][][] keyData) {
-		assert(keyData != null);
-		mKeys = keyData;
-	}
+    private byte[][][] mKeys;
 
-	public int getSectorCount() { return mKeys.length; }
-	public byte[] getKeyA(int sector) { return mKeys[sector][A_KEY]; }
-	public byte[] getKeyB(int sector) { return mKeys[sector][B_KEY]; }
-	public void setKeyA(int sector, byte[] key) { 
-		assert(key == null || key.length == KEY_SIZE); 
-		mKeys[sector][A_KEY] = key; 
-	}
-	public void setKeyB(int sector, byte[] key) { 
-		assert(key == null || key.length == KEY_SIZE);
-		mKeys[sector][B_KEY] = key; 
-	}
-	
-	/**
-	 * Factory method. Read keys from a file on the external 
-	 * storage and create a key chain instance.
-	 * 
-	 * The file format (binary) is:
-	 * [Sector 0 A key|6 Bytes]
-	 * [Sector 0 B key|6 Bytes]
-	 * [Sector 1 A key|6 Bytes]
-	 * ...
-	 * [Sector N B key|6 Bytes]
-	 * 
-	 * @param keyFile 
-	 * @return 
-	 * @throws IOException
-	 */
-	public static MifareKeyChain LoadKeys(File keyFile) throws IOException {
-		assert(keyFile != null);
-		
-		String state = Environment.getExternalStorageState();
+    public MifareKeyChain(int sectors) {
+        assert (sectors > 0);
+        mKeys = new byte[sectors][2][];
+    }
 
-		if (!Environment.MEDIA_MOUNTED.equals(state) && 
-				!Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
-			throw new IOException("Can't access external storage");
+    private MifareKeyChain(byte[][][] keyData) {
+        assert (keyData != null);
+        mKeys = keyData;
+    }
 
-		if (!keyFile.exists())
-			return null;
+    public int getSectorCount() {
+        return mKeys.length;
+    }
 
-		InputStream is = new FileInputStream(keyFile);
-		int totalBytes = is.available();
+    public byte[] getKeyA(int sector) {
+        return mKeys[sector][A_KEY];
+    }
 
-		if ((totalBytes % (2 * KEY_SIZE)) != 0)
-			throw new IOException("Invalid format of keyfile");
+    public byte[] getKeyB(int sector) {
+        return mKeys[sector][B_KEY];
+    }
 
-		int totalSectors = totalBytes / (2 * KEY_SIZE);
-		byte[][][] keys = new byte[totalSectors][2][];
-		for (int sector = 0; sector < totalSectors; ++sector) {
-			keys[sector][0] = new byte[KEY_SIZE];
-			is.read(keys[sector][A_KEY]); 
-			keys[sector][0] = new byte[KEY_SIZE];
-			is.read(keys[sector][B_KEY]); 
-		}
+    public void setKeyA(int sector, byte[] key) {
+        assert (key == null || key.length == KEY_SIZE);
+        mKeys[sector][A_KEY] = key;
+    }
 
-		is.close();
-		
-		return new MifareKeyChain(keys);
-	}
+    public void setKeyB(int sector, byte[] key) {
+        assert (key == null || key.length == KEY_SIZE);
+        mKeys[sector][B_KEY] = key;
+    }
 
-	public void StoreKeys(File keyFile) throws IOException {
-		if (mKeys == null)
-			return;
+    /**
+     * Factory method. Read keys from a file on the external storage and create
+     * a key chain instance.
+     * 
+     * The file format (binary) is: [Sector 0 A key|6 Bytes] [Sector 0 B key|6
+     * Bytes] [Sector 1 A key|6 Bytes] ... [Sector N B key|6 Bytes]
+     * 
+     * @param keyFile
+     * @return
+     * @throws IOException
+     */
+    public static MifareKeyChain LoadKeys(File keyFile) throws IOException {
+        assert (keyFile != null);
 
-		String state = Environment.getExternalStorageState();
+        String state = Environment.getExternalStorageState();
 
-		if (!Environment.MEDIA_MOUNTED.equals(state)
-				|| Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
-			throw new IOException("Can't access external storage. Write access required.");
+        if (!Environment.MEDIA_MOUNTED.equals(state) && !Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
+            throw new IOException("Can't access external storage");
 
-		OutputStream os = new FileOutputStream(keyFile);
-		
-		byte[][][] keys = mKeys; // Local variable optimization
-		for (int sector = 0; sector < keys.length; ++sector) {
-			os.write(keys[sector][A_KEY]); 
-			os.write(keys[sector][B_KEY]); 
-		}
+        if (!keyFile.exists())
+            return null;
 
-		os.close();
-	}
+        InputStream is = new FileInputStream(keyFile);
+        int totalBytes = is.available();
+
+        if ((totalBytes % (2 * KEY_SIZE)) != 0)
+            throw new IOException("Invalid format of keyfile");
+
+        int totalSectors = totalBytes / (2 * KEY_SIZE);
+        byte[][][] keys = new byte[totalSectors][2][];
+        for (int sector = 0; sector < totalSectors; ++sector) {
+            keys[sector][0] = new byte[KEY_SIZE];
+            is.read(keys[sector][A_KEY]);
+            keys[sector][0] = new byte[KEY_SIZE];
+            is.read(keys[sector][B_KEY]);
+        }
+
+        is.close();
+
+        return new MifareKeyChain(keys);
+    }
+
+    public void StoreKeys(File keyFile) throws IOException {
+        if (mKeys == null)
+            return;
+
+        String state = Environment.getExternalStorageState();
+
+        if (!Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
+            throw new IOException("Can't access external storage. Write access required.");
+
+        OutputStream os = new FileOutputStream(keyFile);
+
+        byte[][][] keys = mKeys; // Local variable optimization
+        for (int sector = 0; sector < keys.length; ++sector) {
+            os.write(keys[sector][A_KEY]);
+            os.write(keys[sector][B_KEY]);
+        }
+
+        os.close();
+    }
 
 }
