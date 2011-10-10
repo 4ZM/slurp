@@ -40,6 +40,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -47,7 +50,7 @@ import android.widget.Toast;
 public class SLURPActivity extends Activity {
     static final int KEY_SIZE = 6;
     static final String LOGTAG = "NFC";
-    static final String CURRENT_KEY_FILE = "keys";
+    static final String CURRENT_KEY_FILE = "current.keys";
 
     private NfcAdapter mAdapter;
     private PendingIntent mPendingIntent;
@@ -59,7 +62,6 @@ public class SLURPActivity extends Activity {
     private FindKeysTask mKeysTask;
     private ReadTagTask mReadTagTask;
 
-    private File mKeyFile;
     private MifareKeyChain mKeyChain;
 
     private EditText mTextBoxKeys;
@@ -154,14 +156,7 @@ public class SLURPActivity extends Activity {
 
         mAdapter = NfcAdapter.getDefaultAdapter(this);
 
-        // Try to load keys from the "current" key file.
-        mKeyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
-        try {
-            if (mKeyFile.exists())
-                mKeyChain = MifareKeyChain.LoadKeys(mKeyFile);
-        } catch (IOException e) {
-            Log.e(LOGTAG, "Error loading keys: " + e);
-        }
+        loadKeys();
 
         // Setup foreground processing of NFC intents
         mPendingIntent = PendingIntent.getActivity(this, 0,
@@ -171,6 +166,78 @@ public class SLURPActivity extends Activity {
         mTechLists = new String[][] { new String[] { MifareClassic.class.getName() } };
 
         resolveIntent(getIntent());
+    }
+
+    private boolean loadKeys() {
+        // Try to load keys from the "current" key file.
+        File keyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
+        try {
+            if (!keyFile.exists())
+                return false;
+
+            setKeys(MifareKeyChain.LoadKeys(keyFile));
+        } catch (IOException e) {
+            Log.e(LOGTAG, "Error loading keys: " + e);
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean saveKeys() {
+        if (mKeyChain == null)
+            return false;
+
+        File keyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
+        try {
+            mKeyChain.StoreKeys(keyFile);
+        } catch (IOException e) {
+            Log.e(LOGTAG, "Error loading keys: " + e);
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.clear_keys:
+            setKeys(null);
+            Toast.makeText(this, "Cleared Keys", Toast.LENGTH_SHORT).show();
+            break;
+        case R.id.clear_data:
+            setTagData(null);
+            Toast.makeText(this, "Cleared Data", Toast.LENGTH_SHORT).show();
+            break;
+        case R.id.save_keys:
+            if (mKeyChain == null) {
+                Toast.makeText(this, "No keys in use", Toast.LENGTH_LONG).show();
+            } else if (saveKeys()) {
+                Toast.makeText(this, "Keys Saved", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+            }
+            break;
+        case R.id.load_keys:
+            loadKeys();
+            if (mKeyChain != null)
+                Toast.makeText(this, "Keys Loaded", Toast.LENGTH_SHORT).show();
+            else
+                Toast.makeText(this, "Load Failed", Toast.LENGTH_LONG).show();
+
+            break;
+        case R.id.dump_data:
+            Toast.makeText(this, "Not Impl.", Toast.LENGTH_LONG).show();
+        }
+        return true;
     }
 
     void resolveIntent(Intent intent) {
