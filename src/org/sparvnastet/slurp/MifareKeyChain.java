@@ -17,7 +17,7 @@
  * along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.sparvnastet.nfc;
+package org.sparvnastet.slurp;
 
 import java.io.File;
 import java.io.FileInputStream;

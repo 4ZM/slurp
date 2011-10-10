@@ -17,7 +17,7 @@
  * along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.sparvnastet.nfc;
+package org.sparvnastet.slurp;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,7 @@ import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
 
-public class NFCActivity extends Activity {
+public class SLURPActivity extends Activity {
     static final int KEY_SIZE = 6;
     static final String LOGTAG = "NFC";
     static final String CURRENT_KEY_FILE = "keys";
@@ -257,7 +257,7 @@ public class NFCActivity extends Activity {
         protected void onPreExecute() {
             setProgressBarIndeterminateVisibility(true);
 
-            mProgressDialog = new ProgressDialog(NFCActivity.this);
+            mProgressDialog = new ProgressDialog(SLURPActivity.this);
             mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
             mProgressDialog.setMessage("Trying keys...");
             mProgressDialog.setCancelable(false);
@@ -315,9 +315,9 @@ public class NFCActivity extends Activity {
             mProgressDialog.dismiss();
 
             if (keyChain == null) {
-                Toast.makeText(NFCActivity.this, "Keys Not Found", Toast.LENGTH_SHORT).show();
+                Toast.makeText(SLURPActivity.this, "Keys Not Found", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(NFCActivity.this, "Keys Found", Toast.LENGTH_SHORT).show();
+                Toast.makeText(SLURPActivity.this, "Keys Found", Toast.LENGTH_SHORT).show();
                 readTag(mTag);
             }
 
@@ -347,7 +347,7 @@ public class NFCActivity extends Activity {
         protected void onPreExecute() {
             setProgressBarIndeterminateVisibility(true);
 
-            mProgressDialog = new ProgressDialog(NFCActivity.this);
+            mProgressDialog = new ProgressDialog(SLURPActivity.this);
             mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
             mProgressDialog.setMessage("Reading tag...");
             mProgressDialog.setCancelable(false);
@@ -395,9 +395,9 @@ public class NFCActivity extends Activity {
             mProgressDialog.dismiss();
 
             if (data == null)
-                Toast.makeText(NFCActivity.this, "Couldn't read data", Toast.LENGTH_SHORT).show();
+                Toast.makeText(SLURPActivity.this, "Couldn't read data", Toast.LENGTH_SHORT).show();
             else
-                Toast.makeText(NFCActivity.this, "Data Read", Toast.LENGTH_SHORT).show();
+                Toast.makeText(SLURPActivity.this, "Data Read", Toast.LENGTH_SHORT).show();
 
             setTagData(data);
         }
