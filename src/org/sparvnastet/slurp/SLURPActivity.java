@@ -33,7 +33,6 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.app.PendingIntent;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
@@ -41,7 +40,6 @@ import android.content.res.XmlResourceParser;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.MifareClassic;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
@@ -75,7 +73,7 @@ public class SLURPActivity extends Activity {
     private EditText mTextBoxKeys;
     private EditText mTextBoxData;
 
-    private void setTagData(byte[][][] data) {
+    public void setTagData(byte[][][] data) {
         mTagData = data;
         mTextBoxData.setText("");
 
@@ -83,39 +81,39 @@ public class SLURPActivity extends Activity {
             for (int sector = 0; sector < data.length; ++sector) {
                 mTextBoxData.append("Sector " + sector + ":\n");
                 for (int blockIndex = 0; blockIndex < data[sector].length; ++blockIndex) {
-                    mTextBoxData.append(bytesToString(data[sector][blockIndex]) + "\n");
+                    mTextBoxData.append(DataFormater.bytesToString(data[sector][blockIndex]) + "\n");
                 }
             }
         }
     }
 
-    private void setKeys(MifareKeyChain keys) {
+    public void setKeys(MifareKeyChain keys) {
         mKeyChain = keys;
 
         mTextBoxKeys.setText("");
         if (mKeyChain != null) {
             for (int sector = 0; sector < keys.getSectorCount(); ++sector) {
                 mTextBoxKeys.append("Sector " + (sector < 10 ? ("0" + sector) : sector) + ": "
-                        + bytesToString(keys.getKeyA(sector)) + " | " + bytesToString(keys.getKeyB(sector)) + "\n");
+                        + DataFormater.bytesToString(keys.getKeyA(sector)) + " | "
+                        + DataFormater.bytesToString(keys.getKeyB(sector)) + "\n");
             }
         }
     }
 
-    private void readTag(MifareClassic tag) {
-        mReadTagTask = new ReadTagTask();
+    public void readTag(MifareClassic tag) {
+        mReadTagTask = new ReadTagTask(this, mKeyChain);
         Log.i(LOGTAG, "Starting keys thread");
 
         mReadTagTask.execute(tag);
     }
 
     private void findKeys(MifareClassic tag) {
-        mKeysTask = new FindKeysTask();
+        mKeysTask = new FindKeysTask(this);
         Log.i(LOGTAG, "Starting keys thread");
-
         mKeysTask.execute(tag);
     }
 
-    private byte[][] getDefaultKeys() {
+    public byte[][] getDefaultKeys() {
         ArrayList<byte[]> keys = new ArrayList<byte[]>();
         keys.add(MifareClassic.KEY_DEFAULT);
         keys.add(MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY);
@@ -133,7 +131,7 @@ public class SLURPActivity extends Activity {
                     if (eventType == XmlPullParser.TEXT) {
                         String keyStr = xpp.getText();
                         Log.i(LOGTAG, "Read key from resource: " + keyStr);
-                        byte[] key = fromHexString(keyStr);
+                        byte[] key = DataFormater.fromHexString(keyStr);
                         keys.add(key);
                     }
                 } else {
@@ -267,7 +265,7 @@ public class SLURPActivity extends Activity {
             return false;
 
         StringBuilder sb = new StringBuilder();
-        sb.append(bytesToString(mTagData[0][0]).replace(" ", ""));
+        sb.append(DataFormater.bytesToString(mTagData[0][0]).replace(" ", ""));
         sb.append(".");
 
         final String DATE_FORMAT = "yyyyMMdd.HHmmss";
@@ -357,7 +355,7 @@ public class SLURPActivity extends Activity {
         Log.i(LOGTAG, "Leaving resolveIntent");
     }
 
-    static private int getBlockIndex(MifareClassic tag, int sector, int relBlock) {
+    static public int getBlockIndex(MifareClassic tag, int sector, int relBlock) {
         int blockOffset = 0;
         for (int i = 0; i < sector; ++i)
             blockOffset += tag.getBlockCountInSector(i);
@@ -388,230 +386,5 @@ public class SLURPActivity extends Activity {
         super.onResume();
         if (mAdapter != null)
             mAdapter.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
-    }
-
-    private enum SECTOR_KEY {
-        KEY_A, KEY_B
-    };
-
-    private class FindKeysTask extends AsyncTask<MifareClassic, Integer, MifareKeyChain> {
-        private MifareClassic mTag;
-        private int mSectorCount;
-        private byte[][] mDefaultKeys = getDefaultKeys(); // Make static
-
-        ProgressDialog mProgressDialog;
-
-        @Override
-        protected void onPreExecute() {
-            setProgressBarIndeterminateVisibility(true);
-
-            mProgressDialog = new ProgressDialog(SLURPActivity.this);
-            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            mProgressDialog.setTitle("Trying keys...");
-            mProgressDialog.setCancelable(false);
-            mProgressDialog.show();
-        }
-
-        @Override
-        protected MifareKeyChain doInBackground(MifareClassic... tagParam) {
-            if (tagParam == null || tagParam.length != 1)
-                return null;
-
-            mTag = tagParam[0];
-
-            Log.i(LOGTAG, "TestKeysTask: doInBackground");
-            try {
-                mTag.connect();
-
-                mSectorCount = mTag.getSectorCount();
-                MifareKeyChain keyChain = new MifareKeyChain(mSectorCount);
-
-                byte[] keyA, keyB;
-                for (int i = 0; i < mSectorCount; ++i) {
-                    publishProgress(i);
-
-                    keyA = probeKey(mTag, i, SECTOR_KEY.KEY_A);
-                    keyB = probeKey(mTag, i, SECTOR_KEY.KEY_B);
-                    if (keyA == null || keyB == null) // Require both keys
-                        return null;
-
-                    keyChain.setKeyA(i, keyA);
-                    keyChain.setKeyB(i, keyB);
-                }
-
-                mTag.close();
-
-                return keyChain;
-            } catch (IOException e) {
-                Log.e(LOGTAG, "TestKeysTask: Auth IOException");
-                mTag = null;
-                return null;
-            }
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-            mProgressDialog.setMessage("Sector:  " + progress[0] + " / " + (mSectorCount - 1));
-            Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
-        }
-
-        @Override
-        protected void onPostExecute(MifareKeyChain keyChain) {
-            Log.i(LOGTAG, "TestKeysTask: onPostExecute");
-
-            setProgressBarIndeterminateVisibility(false);
-            mProgressDialog.dismiss();
-
-            if (keyChain == null) {
-                Toast.makeText(SLURPActivity.this, "Keys Not Found", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(SLURPActivity.this, "Keys Found", Toast.LENGTH_SHORT).show();
-                readTag(mTag);
-            }
-
-            setKeys(keyChain);
-        }
-
-        private byte[] probeKey(MifareClassic tag, int sector, SECTOR_KEY keyType) throws IOException {
-            for (byte[] key : mDefaultKeys) {
-                Log.i(LOGTAG, "Sector: " + sector + ", Key (" + keyType + "): " + bytesToString(key));
-
-                if ((keyType == SECTOR_KEY.KEY_A && tag.authenticateSectorWithKeyA(sector, key))
-                        || (keyType == SECTOR_KEY.KEY_B && tag.authenticateSectorWithKeyB(sector, key))) {
-                    Log.i(LOGTAG, "** SUCCESS ** Sector: " + sector + ", Key (" + keyType + "): " + bytesToString(key));
-                    return key;
-                }
-            }
-
-            return null;
-        }
-    }
-
-    private class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
-
-        private ProgressDialog mProgressDialog;
-
-        @Override
-        protected void onPreExecute() {
-            setProgressBarIndeterminateVisibility(true);
-
-            mProgressDialog = new ProgressDialog(SLURPActivity.this);
-            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            mProgressDialog.setMessage("Reading tag...");
-            mProgressDialog.setCancelable(false);
-            mProgressDialog.show();
-        }
-
-        @Override
-        protected byte[][][] doInBackground(MifareClassic... tagParam) {
-            if (tagParam == null || tagParam.length != 1)
-                return null;
-
-            MifareClassic tag = tagParam[0];
-            Log.i(LOGTAG, "ReadTagTask: doInBackground");
-            try {
-                tag.connect();
-
-                int sectorCount = tag.getSectorCount();
-                byte[][][] data = new byte[sectorCount][][];
-
-                for (int i = 0; i < sectorCount; ++i) {
-                    data[i] = readSector(tag, i, mKeyChain.getKeyA(i), mKeyChain.getKeyB(i));
-                    publishProgress((100 * (i + 1)) / sectorCount);
-                }
-
-                tag.close();
-
-                return data;
-            } catch (IOException e) {
-                Log.e(LOGTAG, "ReadTagTask: Auth IOException");
-                return null;
-            }
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-            mProgressDialog.setProgress(progress[0]);
-            Log.i(LOGTAG, "TestKeysTask: progress update " + progress[0]);
-        }
-
-        @Override
-        protected void onPostExecute(byte[][][] data) {
-            Log.i(LOGTAG, "ReadTagTask: onPostExecute");
-
-            setProgressBarIndeterminateVisibility(false);
-            mProgressDialog.dismiss();
-
-            if (data == null)
-                Toast.makeText(SLURPActivity.this, "Couldn't read data", Toast.LENGTH_SHORT).show();
-            else
-                Toast.makeText(SLURPActivity.this, "Data Read", Toast.LENGTH_SHORT).show();
-
-            setTagData(data);
-        }
-
-        // TODO This function should look at the access ctrl bits to determine
-        // what keys to use.
-        private byte[][] readSector(MifareClassic tag, int sector, byte[] keyA, byte[] keyB) throws IOException {
-            byte[][] data = new byte[tag.getBlockCountInSector(sector)][];
-
-            Log.i(LOGTAG, "ReadTagTask");
-            boolean res = keyA != null && tag.authenticateSectorWithKeyA(sector, keyA);
-
-            if (res)
-                Log.i(LOGTAG, "Use Key A");
-
-            if (!res && keyB != null) {
-                Log.i(LOGTAG, "Use Key A");
-                res = tag.authenticateSectorWithKeyB(sector, keyB);
-            }
-
-            if (!res)
-                throw new IOException("READ ERROR - can't auth");
-
-            int blocks = tag.getBlockCountInSector(sector);
-            for (int i = 0; i < blocks; ++i)
-                data[i] = tag.readBlock(getBlockIndex(tag, sector, i));
-
-            // We might not have read access to the access ctrl block.
-            // just fill in the data from our known keys.
-            for (int i = 0; i < KEY_SIZE; ++i)
-                data[blocks - 1][i] = keyA[i];
-
-            for (int i = 0; i < KEY_SIZE; ++i)
-                data[blocks - 1][i + 10] = keyB[i];
-
-            return data;
-        }
-
-    }
-
-    private static byte[] fromHexString(final String encoded) {
-        if ((encoded.length() % 2) != 0)
-            throw new IllegalArgumentException("Input string must contain an even number of characters");
-
-        final byte result[] = new byte[encoded.length() / 2];
-        final char enc[] = encoded.toCharArray();
-        for (int i = 0; i < enc.length; i += 2) {
-            StringBuilder curr = new StringBuilder(2);
-            curr.append(enc[i]).append(enc[i + 1]);
-            result[i / 2] = (byte) Integer.parseInt(curr.toString(), 16);
-        }
-        return result;
-    }
-
-    private static String byteToHexString(byte b) {
-        String hex = Integer.toHexString(b & 0xff);
-        return (b & 0xff) < 0x10 ? "0" + hex : hex;
-    }
-
-    private static String bytesToString(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(byteToHexString(bytes[0]));
-        for (int i = 1; i < bytes.length; ++i) {
-            sb.append(" ");
-            sb.append(byteToHexString(bytes[i]));
-        }
-        return sb.toString();
     }
 }
