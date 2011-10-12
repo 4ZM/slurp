@@ -123,10 +123,10 @@ public class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
 
         // We might not have read access to the access ctrl block.
         // just fill in the data from our known keys.
-        for (int i = 0; i < SLURPActivity.KEY_SIZE; ++i)
+        for (int i = 0; i < MifareKeyChain.KEY_SIZE; ++i)
             data[blocks - 1][i] = keyA[i];
 
-        for (int i = 0; i < SLURPActivity.KEY_SIZE; ++i)
+        for (int i = 0; i < MifareKeyChain.KEY_SIZE; ++i)
             data[blocks - 1][i + 10] = keyB[i];
 
         return data;
