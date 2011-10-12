@@ -35,6 +35,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.nfc.NfcAdapter;
@@ -52,11 +53,9 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 public class SLURPActivity extends Activity {
-    static final int KEY_SIZE = 6;
-    static final String LOGTAG = "NFC";
-    static final String CURRENT_KEY_FILE = "current.keys";
-
-    static final String BUNDLE_KEY_CHAIN = "KEY_CHAIN";
+    public static final String LOGTAG = "NFC";
+    private static final String CURRENT_KEY_FILE = "current.keys";
+    private static final String BUNDLE_KEY_CHAIN = "KEY_CHAIN";
 
     private NfcAdapter mAdapter;
     private PendingIntent mPendingIntent;
@@ -72,6 +71,113 @@ public class SLURPActivity extends Activity {
 
     private EditText mTextBoxKeys;
     private EditText mTextBoxData;
+
+    /** Activity class overrides */
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        Log.i(LOGTAG, "onCreate");
+        setContentView(R.layout.main);
+
+        mTextBoxKeys = (EditText) findViewById(R.id.EditTextKeys);
+        mTextBoxData = (EditText) findViewById(R.id.editTextData);
+
+        mAdapter = NfcAdapter.getDefaultAdapter(this);
+
+        if (savedInstanceState == null)
+            loadKeys();
+        else {
+            MifareKeyChain keyChain = savedInstanceState.getParcelable(BUNDLE_KEY_CHAIN);
+            setKeys(keyChain);
+        }
+
+        // Setup foreground processing of NFC intents
+        mPendingIntent = PendingIntent.getActivity(this, 0,
+                new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
+        IntentFilter techFilter = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
+        mFilters = new IntentFilter[] { techFilter };
+        mTechLists = new String[][] { new String[] { MifareClassic.class.getName() } };
+
+        Intent intent = getIntent();
+        resolveIntent(intent);
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        setIntent(intent);
+        resolveIntent(intent);
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.clear_keys:
+            setKeys(null);
+            Toast.makeText(this, "Cleared Keys", Toast.LENGTH_SHORT).show();
+            break;
+        case R.id.clear_data:
+            setTagData(null);
+            Toast.makeText(this, "Cleared Data", Toast.LENGTH_SHORT).show();
+            break;
+        case R.id.save_keys:
+            if (mKeyChain == null) {
+                Toast.makeText(this, "No keys in use", Toast.LENGTH_LONG).show();
+            } else if (saveKeys()) {
+                Toast.makeText(this, "Keys Saved", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+            }
+            break;
+        case R.id.load_keys:
+            loadKeys();
+            if (mKeyChain != null)
+                Toast.makeText(this, "Keys Loaded", Toast.LENGTH_SHORT).show();
+            else
+                Toast.makeText(this, "Load Failed", Toast.LENGTH_LONG).show();
+            break;
+        case R.id.dump_data:
+            if (saveData())
+                Toast.makeText(this, "Data Saved", Toast.LENGTH_LONG).show();
+            else
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+            break;
+        }
+        return true;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(BUNDLE_KEY_CHAIN, mKeyChain);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (mAdapter != null)
+            mAdapter.disableForegroundDispatch(this);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (mAdapter != null)
+            mAdapter.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
+    }
 
     public void setTagData(byte[][][] data) {
         mTagData = data;
@@ -148,38 +254,6 @@ public class SLURPActivity extends Activity {
         return keys.toArray(keysArray);
     }
 
-    /** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-        Log.i(LOGTAG, "onCreate");
-        setContentView(R.layout.main);
-
-        mTextBoxKeys = (EditText) findViewById(R.id.EditTextKeys);
-        mTextBoxData = (EditText) findViewById(R.id.editTextData);
-
-        mAdapter = NfcAdapter.getDefaultAdapter(this);
-
-        if (savedInstanceState == null)
-            loadKeys();
-        else {
-            MifareKeyChain keyChain = savedInstanceState.getParcelable(BUNDLE_KEY_CHAIN);
-            setKeys(keyChain);
-        }
-
-        setTagData(null);
-
-        // Setup foreground processing of NFC intents
-        mPendingIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
-        IntentFilter techFilter = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
-        mFilters = new IntentFilter[] { techFilter };
-        mTechLists = new String[][] { new String[] { MifareClassic.class.getName() } };
-
-        resolveIntent(getIntent());
-    }
-
     private boolean loadKeys() {
         // Try to load keys from the "current" key file.
         File keyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
@@ -208,50 +282,6 @@ public class SLURPActivity extends Activity {
             return false;
         }
 
-        return true;
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.clear_keys:
-            setKeys(null);
-            Toast.makeText(this, "Cleared Keys", Toast.LENGTH_SHORT).show();
-            break;
-        case R.id.clear_data:
-            setTagData(null);
-            Toast.makeText(this, "Cleared Data", Toast.LENGTH_SHORT).show();
-            break;
-        case R.id.save_keys:
-            if (mKeyChain == null) {
-                Toast.makeText(this, "No keys in use", Toast.LENGTH_LONG).show();
-            } else if (saveKeys()) {
-                Toast.makeText(this, "Keys Saved", Toast.LENGTH_LONG).show();
-            } else {
-                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
-            }
-            break;
-        case R.id.load_keys:
-            loadKeys();
-            if (mKeyChain != null)
-                Toast.makeText(this, "Keys Loaded", Toast.LENGTH_SHORT).show();
-            else
-                Toast.makeText(this, "Load Failed", Toast.LENGTH_LONG).show();
-            break;
-        case R.id.dump_data:
-            if (saveData())
-                Toast.makeText(this, "Data Saved", Toast.LENGTH_LONG).show();
-            else
-                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
-            break;
-        }
         return true;
     }
 
@@ -311,8 +341,9 @@ public class SLURPActivity extends Activity {
         Log.i(LOGTAG, "resolveIntent action=" + intent.getAction());
 
         String action = intent.getAction();
-
-        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
+        if (Intent.ACTION_MAIN.equals(action)) {
+            setTagData(null);
+        } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
 
             Parcelable tags = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tags == null) {
@@ -327,21 +358,10 @@ public class SLURPActivity extends Activity {
     private void tagDetected(Tag tag) {
         MifareClassic mifareTag = MifareClassic.get(tag);
         if (mifareTag == null) {
-            Log.i(LOGTAG, "resolveIntent: Unknown tag type (not MifareClassic)");
+            Log.i(LOGTAG, "Unknown tag type found (not MifareClassic)");
             return;
         }
-        Log.i(LOGTAG, "resolveIntent: found MifareClassic tag");
-        Log.i(LOGTAG, "Sector Count: " + mifareTag.getSectorCount());
-
-        int size = mifareTag.getSize();
-        if (size == MifareClassic.SIZE_1K)
-            Log.i(LOGTAG, "Size: 1k");
-        else if (size == MifareClassic.SIZE_4K)
-            Log.i(LOGTAG, "Size: 4k");
-        else
-            Log.i(LOGTAG, "Size: ? (code " + size + ")");
-
-        Log.i(LOGTAG, "Tag type: " + mifareTag.getType());
+        Log.i(LOGTAG, "Found MifareClassic Tag. Sector Count: " + mifareTag.getSectorCount());
 
         if (mKeyChain == null || mKeyChain.getSectorCount() != mifareTag.getSectorCount()) {
             Log.i(LOGTAG, "Keys is null, will start search");
@@ -351,8 +371,6 @@ public class SLURPActivity extends Activity {
             Log.i(LOGTAG, "Keys are pressent, will try to read data");
             readTag(mifareTag);
         }
-
-        Log.i(LOGTAG, "Leaving resolveIntent");
     }
 
     static public int getBlockIndex(MifareClassic tag, int sector, int relBlock) {
@@ -362,29 +380,4 @@ public class SLURPActivity extends Activity {
         return blockOffset + relBlock;
     }
 
-    @Override
-    public void onNewIntent(Intent intent) {
-        setIntent(intent);
-        resolveIntent(intent);
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelable(BUNDLE_KEY_CHAIN, mKeyChain);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (mAdapter != null)
-            mAdapter.disableForegroundDispatch(this);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (mAdapter != null)
-            mAdapter.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
-    }
 }
