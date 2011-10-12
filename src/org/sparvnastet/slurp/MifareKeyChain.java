@@ -113,7 +113,7 @@ public class MifareKeyChain implements Parcelable {
         return new MifareKeyChain(keys);
     }
 
-    public void StoreKeys(File keyFile) throws IOException {
+    public void storeKeys(File keyFile) throws IOException {
         if (mKeys == null)
             return;
 

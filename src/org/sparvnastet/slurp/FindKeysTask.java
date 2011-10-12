@@ -106,14 +106,14 @@ public class FindKeysTask extends AsyncTask<MifareClassic, Integer, MifareKeyCha
         mActivity.setProgressBarIndeterminateVisibility(false);
         mProgressDialog.dismiss();
 
+        mActivity.setKeys(keyChain);
+
         if (keyChain == null) {
             Toast.makeText(mActivity, "Keys Not Found", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(mActivity, "Keys Found", Toast.LENGTH_SHORT).show();
             mActivity.readTag(mTag);
         }
-
-        mActivity.setKeys(keyChain);
     }
 
     private byte[] probeKey(MifareClassic tag, int sector, FindKeysTask.SECTOR_KEY keyType) throws IOException {

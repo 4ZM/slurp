@@ -20,13 +20,8 @@
 package org.sparvnastet.slurp;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -42,7 +37,6 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.MifareClassic;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Parcelable;
 import android.util.Log;
 import android.view.Menu;
@@ -62,7 +56,7 @@ public class SLURPActivity extends Activity {
     private IntentFilter[] mFilters;
     private String[][] mTechLists;
 
-    private byte[][][] mTagData;
+    private TagData mTagData;
 
     private FindKeysTask mKeysTask;
     private ReadTagTask mReadTagTask;
@@ -135,11 +129,11 @@ public class SLURPActivity extends Activity {
             break;
         case R.id.save_keys:
             if (mKeyChain == null) {
-                Toast.makeText(this, "No keys in use", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "No keys in use", Toast.LENGTH_SHORT).show();
             } else if (saveKeys()) {
-                Toast.makeText(this, "Keys Saved", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Keys Saved", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_SHORT).show();
             }
             break;
         case R.id.load_keys:
@@ -147,13 +141,15 @@ public class SLURPActivity extends Activity {
             if (mKeyChain != null)
                 Toast.makeText(this, "Keys Loaded", Toast.LENGTH_SHORT).show();
             else
-                Toast.makeText(this, "Load Failed", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Load Failed", Toast.LENGTH_SHORT).show();
             break;
         case R.id.dump_data:
-            if (saveData())
-                Toast.makeText(this, "Data Saved", Toast.LENGTH_LONG).show();
+            if (mTagData == null) {
+                Toast.makeText(this, "No Data", Toast.LENGTH_SHORT).show();
+            } else if (saveData())
+                Toast.makeText(this, "Data Saved", Toast.LENGTH_SHORT).show();
             else
-                Toast.makeText(this, "Save Failed", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Save Failed", Toast.LENGTH_SHORT).show();
             break;
         }
         return true;
@@ -179,15 +175,15 @@ public class SLURPActivity extends Activity {
             mAdapter.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
     }
 
-    public void setTagData(byte[][][] data) {
+    public void setTagData(TagData data) {
         mTagData = data;
         mTextBoxData.setText("");
 
         if (data != null) {
-            for (int sector = 0; sector < data.length; ++sector) {
+            for (int sector = 0; sector < data.getSectorCount(); ++sector) {
                 mTextBoxData.append("Sector " + sector + ":\n");
-                for (int blockIndex = 0; blockIndex < data[sector].length; ++blockIndex) {
-                    mTextBoxData.append(DataFormater.bytesToString(data[sector][blockIndex]) + "\n");
+                for (int blockIndex = 0; blockIndex < data.getBlockInSectorCount(sector); ++blockIndex) {
+                    mTextBoxData.append(DataFormater.bytesToString(data.getSector(sector)[blockIndex]) + "\n");
                 }
             }
         }
@@ -276,7 +272,7 @@ public class SLURPActivity extends Activity {
 
         File keyFile = new File(getExternalFilesDir(null), CURRENT_KEY_FILE);
         try {
-            mKeyChain.StoreKeys(keyFile);
+            mKeyChain.storeKeys(keyFile);
         } catch (IOException e) {
             Log.e(LOGTAG, "Error loading keys: " + e);
             return false;
@@ -286,51 +282,13 @@ public class SLURPActivity extends Activity {
     }
 
     private boolean saveData() {
-        if (mTagData == null)
+        if (!mTagData.isDataComplete())
             return false;
-
-        String state = Environment.getExternalStorageState();
-
-        if (!Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
-            return false;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(DataFormater.bytesToString(mTagData[0][0]).replace(" ", ""));
-        sb.append(".");
-
-        final String DATE_FORMAT = "yyyyMMdd.HHmmss";
-        Calendar cal = Calendar.getInstance();
-        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
-        sb.append(sdf.format(cal.getTime()));
-        sb.append(".card");
-
-        String fileName = sb.toString();
-        Log.i(LOGTAG, "Trying to safe data to: " + fileName);
-
-        File dataFile = new File(getExternalFilesDir(null), fileName);
 
         try {
-
-            OutputStream os = new FileOutputStream(dataFile);
-
-            byte[][][] data = mTagData; // Local variable optimization
-            int totalBytes = 0;
-            for (int sector = 0; sector < data.length; ++sector) {
-                for (int block = 0; block < data[sector].length; ++block) {
-                    os.write(data[sector][block]);
-                    totalBytes += data[sector][block].length;
-                }
-            }
-
-            // Pad up to 4k size (for nfc-mfclassic compatibility)
-            assert (4096 - totalBytes >= 0);
-            os.write(new byte[4096 - totalBytes]);
-
-            os.close();
-
-        } catch (FileNotFoundException e) {
-            return false;
+            mTagData.saveData(getExternalFilesDir(null));
         } catch (IOException e) {
+            Log.e(LOGTAG, "Error saving data: " + e);
             return false;
         }
 

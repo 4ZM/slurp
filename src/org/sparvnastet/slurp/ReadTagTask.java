@@ -27,7 +27,7 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 
-public class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
+public class ReadTagTask extends AsyncTask<MifareClassic, Integer, TagData> {
 
     private ProgressDialog mProgressDialog;
     SLURPActivity mActivity;
@@ -51,7 +51,7 @@ public class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
     }
 
     @Override
-    protected byte[][][] doInBackground(MifareClassic... tagParam) {
+    protected TagData doInBackground(MifareClassic... tagParam) {
         if (tagParam == null || tagParam.length != 1)
             return null;
 
@@ -61,10 +61,10 @@ public class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
             tag.connect();
 
             int sectorCount = tag.getSectorCount();
-            byte[][][] data = new byte[sectorCount][][];
+            TagData data = new TagData(sectorCount);
 
             for (int i = 0; i < sectorCount; ++i) {
-                data[i] = readSector(tag, i, mKeyChain.getKeyA(i), mKeyChain.getKeyB(i));
+                data.setSector(i, readSector(tag, i, mKeyChain.getKeyA(i), mKeyChain.getKeyB(i)));
                 publishProgress((100 * (i + 1)) / sectorCount);
             }
 
@@ -84,7 +84,7 @@ public class ReadTagTask extends AsyncTask<MifareClassic, Integer, byte[][][]> {
     }
 
     @Override
-    protected void onPostExecute(byte[][][] data) {
+    protected void onPostExecute(TagData data) {
         Log.i(SLURPActivity.LOGTAG, "ReadTagTask: onPostExecute");
 
         mActivity.setProgressBarIndeterminateVisibility(false);
