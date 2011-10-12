@@ -379,5 +379,4 @@ public class SLURPActivity extends Activity {
             blockOffset += tag.getBlockCountInSector(i);
         return blockOffset + relBlock;
     }
-
 }
