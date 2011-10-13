@@ -30,8 +30,17 @@ import android.os.Environment;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+/**
+ * This class represents the keys used to read and write a MifareClassic tag.
+ *
+ * It's a mapping between the sectors of a card and access keys. There are two
+ * keys (A & B) per sector.
+ */
 public class MifareKeyChain implements Parcelable {
 
+    /**
+     * Size of a key in bytes.
+     */
     public final static int KEY_SIZE = 6;
 
     private final static int A_KEY = 0;

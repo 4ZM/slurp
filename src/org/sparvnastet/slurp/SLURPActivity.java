@@ -46,10 +46,16 @@ import android.view.Window;
 import android.widget.EditText;
 import android.widget.Toast;
 
+/**
+ * Main activity of the application.
+ *
+ * Handles user input and system events.
+ */
 public class SLURPActivity extends Activity {
     public static final String LOGTAG = "NFC";
     private static final String CURRENT_KEY_FILE = "current.keys";
     private static final String BUNDLE_KEY_CHAIN = "KEY_CHAIN";
+    private static final String BUNDLE_TAG_DATA = "TAG_DATA";
 
     private NfcAdapter mAdapter;
     private PendingIntent mPendingIntent;
@@ -80,11 +86,15 @@ public class SLURPActivity extends Activity {
 
         mAdapter = NfcAdapter.getDefaultAdapter(this);
 
-        if (savedInstanceState == null)
+        if (savedInstanceState == null) {
             loadKeys();
+            setTagData(null);
+        }
         else {
             MifareKeyChain keyChain = savedInstanceState.getParcelable(BUNDLE_KEY_CHAIN);
             setKeys(keyChain);
+            TagData tagData = savedInstanceState.getParcelable(BUNDLE_TAG_DATA);
+            setTagData(tagData);
         }
 
         // Setup foreground processing of NFC intents
@@ -159,6 +169,7 @@ public class SLURPActivity extends Activity {
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putParcelable(BUNDLE_KEY_CHAIN, mKeyChain);
+        outState.putParcelable(BUNDLE_TAG_DATA, mTagData);
     }
 
     @Override
@@ -299,9 +310,7 @@ public class SLURPActivity extends Activity {
         Log.i(LOGTAG, "resolveIntent action=" + intent.getAction());
 
         String action = intent.getAction();
-        if (Intent.ACTION_MAIN.equals(action)) {
-            setTagData(null);
-        } else if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
+        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)) {
 
             Parcelable tags = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tags == null) {

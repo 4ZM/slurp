@@ -27,9 +27,14 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
-public class TagData {
+/**
+ * This class represents the data of a MifareClassic tag.
+ */
+public class TagData implements Parcelable {
     private byte[][][] mData;
 
     public TagData(int sectors) {
@@ -56,6 +61,12 @@ public class TagData {
         return mData[sector];
     }
 
+    /**
+     * Save the tag data to the external storage.
+     *
+     * @param directory
+     * @throws IOException
+     */
     public void saveData(File directory) throws IOException {
         assert (isDataComplete());
 
@@ -97,6 +108,9 @@ public class TagData {
         os.close();
     }
 
+    /**
+     * @return true if all the sectors contains all valid (not null) blocks.
+     */
     public boolean isDataComplete() {
         for (byte[][] sector : mData) {
             if (sector == null)
@@ -108,5 +122,55 @@ public class TagData {
         }
         return true;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(mData.length);
+        for (byte[][] sector : mData) {
+            if (sector == null)
+                dest.writeInt(0);
+            else {
+                dest.writeInt(sector.length);
+                for (byte[] block : sector) {
+                    if (block == null)
+                        dest.writeInt(0);
+                    else {
+                        dest.writeInt(block.length);
+                        dest.writeByteArray(block);
+                    }
+                }
+            }
+        }
+    }
+
+    public static final Parcelable.Creator<TagData> CREATOR = new Parcelable.Creator<TagData>() {
+        public TagData createFromParcel(Parcel in) {
+            int sectors = in.readInt();
+            TagData tag = new TagData(sectors);
+
+            for (int i = 0; i < sectors; ++i) {
+                int blocks = in.readInt();
+                byte[][] sectorData = new byte[blocks][];
+                for (int j = 0; j < blocks; ++j) {
+                    int blockLength = in.readInt();
+                    if (blockLength > 0) {
+                        sectorData[j] = in.createByteArray();
+                    }
+                    tag.setSector(i, sectorData);
+                }
+            }
+
+            return tag;
+        }
+
+        public TagData[] newArray(int size) {
+            return new TagData[size];
+        }
+    };
 
 }
