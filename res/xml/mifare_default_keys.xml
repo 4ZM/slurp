@@ -18,20 +18,29 @@ You should have received a copy of the GNU General Public License
 along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-	<key>000000000000</key> <!-- Blank key -->
-	<key>b0b1b2b3b4b5</key> <!-- Key from mfoc -->
-	<key>4d3a99c351dd</key> <!-- Key from mfoc -->
-	<key>1a982c7e459a</key> <!-- Key from mfoc -->
-	<key>aabbccddeeff</key> <!-- Key from mfoc -->
-	<key>714c5c886e97</key> <!-- Key from mfoc -->
-	<key>587ee5f9350f</key> <!-- Key from mfoc -->
-	<key>a0478cc39091</key> <!-- Key from mfoc -->
-	<key>533cb6c723f6</key> <!-- Key from mfoc -->
-	<key>8fd0a4f256e9</key> <!-- Key from mfoc -->
-	<key>a64598a77478</key> <!-- RKF Key A -->
-	<key>26940b21ff5d</key> <!-- RKF Key A -->
-	<key>fc00018778f7</key> <!-- RKF Key A -->
-	<key>00000ffe2488</key> <!-- RKF Key B -->
-	<key>5c598c9c58b5</key> <!-- RKF Key B -->
-	<key>e4d2770a89be</key> <!-- RKF Key B -->
+    <key>000000000000</key> <!-- Default key -->
+    <key>ffffffffffff</key> <!-- Default key -->
+    <key>b0b1b2b3b4b5</key> <!-- Key from mfoc -->
+    <key>4d3a99c351dd</key> <!-- Key from mfoc -->
+    <key>1a982c7e459a</key> <!-- Key from mfoc -->
+    <key>aabbccddeeff</key> <!-- Key from mfoc -->
+    <key>714c5c886e97</key> <!-- Key from mfoc -->
+    <key>587ee5f9350f</key> <!-- Key from mfoc -->
+    <key>a0478cc39091</key> <!-- Key from mfoc -->
+    <key>533cb6c723f6</key> <!-- Key from mfoc -->
+    <key>8fd0a4f256e9</key> <!-- Key from mfoc -->
+
+    <!-- Data from: http://pastebin.com/wcTHXLZZ -->
+    <key>a64598a77478</key> <!-- RKF SL Key A -->
+    <key>26940b21ff5d</key> <!-- RKF SL Key A -->
+    <key>fc00018778f7</key> <!-- RKF SL Key A -->
+    <key>00000ffe2488</key> <!-- RKF SL Key B -->
+    <key>5c598c9c58b5</key> <!-- RKF SL Key B -->
+    <key>e4d2770a89be</key> <!-- RKF SL Key B -->
+
+    <!-- Data from: http://pastebin.com/svGjN30Q -->
+    <key>47524f555041</key> <!-- RKF JOJO GROUP Key A -->
+    <key>47524f555042</key> <!-- RKF JOJO GROUP Key B -->
+    <key>505249564141</key> <!-- RKF JOJO PRIVA Key A -->
+    <key>505249564142</key> <!-- RKF JOJO PRIVA Key B -->
 </resources>
