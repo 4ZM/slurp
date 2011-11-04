@@ -43,4 +43,12 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <key>47524f555042</key> <!-- RKF JOJO GROUP Key B -->
     <key>505249564141</key> <!-- RKF JOJO PRIVA Key A -->
     <key>505249564142</key> <!-- RKF JOJO PRIVA Key B -->
+
+    <!-- Data from: http://pastebin.com/d7sSetef -->
+    <key>fc00018778f7</key> <!-- RKF Rejskort Danmark Key A -->
+    <key>00000ffe2488</key> <!-- RKF Rejskort Danmark Key B -->
+    <key>0297927c0f77</key> <!-- RKF Rejskort Danmark Key A -->
+    <key>ee0042f88840</key> <!-- RKF Rejskort Danmark Key B -->
+    <key>722bfcc5375f</key> <!-- RKF Rejskort Danmark Key A -->
+    <key>f1d83f964314</key> <!-- RKF Rejskort Danmark Key B -->
 </resources>
