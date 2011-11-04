@@ -51,4 +51,28 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <key>ee0042f88840</key> <!-- RKF Rejskort Danmark Key B -->
     <key>722bfcc5375f</key> <!-- RKF Rejskort Danmark Key A -->
     <key>f1d83f964314</key> <!-- RKF Rejskort Danmark Key B -->
+
+    <!-- Data from: http://pastebin.com/y3PDBWR1 -->
+    <!-- Gothenburg and Skåne? -->
+    <key>000000000001</key>
+    <key>a0a1a2a3a4a5</key>
+    <key>123456789abc</key>
+    <key>b127c6f41436</key>
+    <key>12f2ee3478c1</key>
+    <key>34d1df9934c5</key>
+    <key>55f5a5dd38c9</key>
+    <key>f1a97341a9fc</key>
+    <key>33f974b42769</key>
+    <key>14d446e33363</key>
+    <key>c934fe34d934</key>
+    <key>1999a3554a55</key>
+    <key>27dd91f1fcf1</key>
+    <key>a94133013401</key>
+    <key>99c636334433</key>
+    <key>43ab19ef5c31</key>
+    <key>a053a292a4af</key>
+    <key>434f4d4d4f41</key>
+    <key>434f4d4d4f42</key>
+    <key>505249565441</key>
+    <key>505249565442</key>
 </resources>
