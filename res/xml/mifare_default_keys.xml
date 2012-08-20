@@ -39,6 +39,8 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <key>e4d2770a89be</key> <!-- RKF SL Key B -->
 
     <!-- Data from: http://pastebin.com/svGjN30Q -->
+    <key>434f4d4d4f41</key> <!-- RKF JOJO GROUP Key A -->
+    <key>434f4d4d4f42</key> <!-- RKF JOJO GROUP Key B -->
     <key>47524f555041</key> <!-- RKF JOJO GROUP Key A -->
     <key>47524f555042</key> <!-- RKF JOJO GROUP Key B -->
     <key>505249564141</key> <!-- RKF JOJO PRIVA Key A -->
@@ -52,8 +54,22 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <key>722bfcc5375f</key> <!-- RKF Rejskort Danmark Key A -->
     <key>f1d83f964314</key> <!-- RKF Rejskort Danmark Key B -->
 
+    <!-- Data from: http://pastebin.com/pvJX0xVS -->
+    <key>54726176656C</key> <!-- Transport Key A -->
+    <key>776974687573</key> <!-- Transport Key B -->
+    <key>4AF9D7ADEBE4</key> <!-- Directory and event log Key A -->
+    <key>2BA9621E0A36</key> <!-- Directory and event log Key B -->
+
+    <!-- Data from: http://pastebin.com/Dnnc5dFC -->
+    <!-- New cards are not encrypted (MF Ultralight) -->
+    <key>fc00018778f7</key> <!-- Västtrafiken Key A -->
+    <key>00000ffe2488</key> <!-- Västtrafiken Key B -->
+    <key>0297927c0f77</key> <!-- Västtrafiken Key A -->
+    <key>ee0042f88840</key> <!-- Västtrafiken Key B -->
+    <key>54726176656c</key> <!-- Västtrafiken Key A -->
+    <key>776974687573</key> <!-- Västtrafiken Key B -->
+
     <!-- Data from: http://pastebin.com/y3PDBWR1 -->
-    <!-- Gothenburg and Skåne? -->
     <key>000000000001</key>
     <key>a0a1a2a3a4a5</key>
     <key>123456789abc</key>
