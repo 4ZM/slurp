@@ -2,7 +2,9 @@
 
 .project
 .classpath
+.settings
 default.properties
+project.properties
 proguard.cfg
 bin
 gen
