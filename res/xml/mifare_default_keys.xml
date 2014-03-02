@@ -60,6 +60,12 @@ along with SLURP.  If not, see <http://www.gnu.org/licenses/>.
     <key>4AF9D7ADEBE4</key> <!-- Directory and event log Key A -->
     <key>2BA9621E0A36</key> <!-- Directory and event log Key B -->
 
+    <!-- Data from: http://pastebin.com/AK9Bftpw -->
+    <key>48ffe71294a0</key> <!-- Länstrafiken i Västerbotten -->
+    <key>e3429281efc1</key> <!-- Länstrafiken i Västerbotten -->
+    <key>16f21a82ec84</key> <!-- Länstrafiken i Västerbotten -->
+    <key>460722122510</key> <!-- Länstrafiken i Västerbotten -->
+
     <!-- Data from: http://pastebin.com/Dnnc5dFC -->
     <!-- New cards are not encrypted (MF Ultralight) -->
     <key>fc00018778f7</key> <!-- Västtrafiken Key A -->
